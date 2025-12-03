@@ -1,0 +1,15 @@
+# Video files
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Output
+test_output/
+output/
