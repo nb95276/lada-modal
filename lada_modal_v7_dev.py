@@ -4,16 +4,7 @@
 import modal
 
 image = (
-    modal.Image.from_registry("ladaapp/lada:latest", add_python="3.13")
-    .apt_install("aria2", "git", "curl", "wget")
-    .run_commands(
-        "curl -sS https://bootstrap.pypa.io/get-pip.py | python",
-        "pip install fastapi requests tqdm",
-        "pip install git+https://github.com/ladaapp/lada.git@main",
-        "wget -q -O /model_weights/lada_mosaic_detection_model_v2.pt https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v2.pt",
-        "wget -q -O /model_weights/lada_mosaic_detection_model_v3.1_fast.pt https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v3.1_fast.pt",
-        "wget -q -O /model_weights/lada_mosaic_detection_model_v3.1_accurate.pt https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v3.1_accurate.pt",
-    )
+    modal.Image.from_registry("fkccp/lada-modal:latest")
 )
 
 app = modal.App("lada-restore-v7-dev", image=image)
