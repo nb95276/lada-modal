@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 """
 Download restored videos from Modal Volume
-从 Modal Volume 下载修复后的视频
 """
 
 import subprocess
 import sys
 from pathlib import Path
 
+# Get modal.exe path from .venv312
+SCRIPT_DIR = Path(__file__).parent
+MODAL_EXE = SCRIPT_DIR / ".venv312" / "Scripts" / "modal.exe"
+
 
 def list_output_files():
-    """列出 Volume 中的输出文件"""
+    """List output files in Volume (sorted to match display order)"""
     import json
     
-    # 使用 JSON 输出获取完整文件名
-    cmd = ["modal", "volume", "ls", "lada-videos", "/output", "--json"]
+    cmd = [str(MODAL_EXE), "volume", "ls", "lada-videos", "/output", "--json"]
     result = subprocess.run(cmd, capture_output=True, text=True)
     
     if result.returncode != 0:
@@ -23,18 +25,11 @@ def list_output_files():
     
     try:
         data = json.loads(result.stdout)
-        files = [item["Filename"] for item in data if item.get("Type") == "file"]
+        # Get filenames and sort them to match Modal's display order
+        files = sorted([item["Filename"] for item in data if item.get("Type") == "file"])
         return files
     except (json.JSONDecodeError, KeyError):
-        # 回退到解析表格输出
-        import re
-        files = []
-        for line in result.stdout.split("\n"):
-            match = re.search(r"│\s*(output/[^\s│]+)", line)
-            if match:
-                filename = match.group(1).strip().rstrip("…")
-                files.append(filename)
-        return files
+        return []
 
 
 def download_file(filename: str, local_dir: str = "."):
@@ -61,10 +56,11 @@ def download_file(filename: str, local_dir: str = "."):
     print(f"Downloading: {remote_path}")
     
     cmd = [
-        "modal", "volume", "get",
+        str(MODAL_EXE), "volume", "get",
         "lada-videos",
         remote_path,
         str(local_path),
+        "--force",
     ]
     
     result = subprocess.run(cmd)
@@ -116,9 +112,23 @@ def main():
         download_all(local_dir)
     
     else:
-        # 当作文件名处理
+        # Support numeric index selection
+        filename = action
+        if filename.isdigit():
+            files = list_output_files()
+            idx = int(filename) - 1
+            if 0 <= idx < len(files):
+                filename = files[idx]
+                # Remove output/ prefix if present
+                if filename.startswith("output/"):
+                    filename = filename[7:]
+                print(f"Selected: {filename}")
+            else:
+                print(f"Error: Invalid index {action}")
+                return
+        
         local_dir = sys.argv[2] if len(sys.argv) > 2 else "."
-        download_file(action, local_dir)
+        download_file(filename, local_dir)
 
 
 if __name__ == "__main__":

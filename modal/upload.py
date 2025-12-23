@@ -1,21 +1,33 @@
 # -*- coding: utf-8 -*-
 """
 Upload videos to Modal Volume
-上传视频到 Modal Volume
 """
 
 import subprocess
 import sys
+import os
 from pathlib import Path
 
+# Get modal.exe path from .venv312
+SCRIPT_DIR = Path(__file__).parent
+MODAL_EXE = SCRIPT_DIR / ".venv312" / "Scripts" / "modal.exe"
 
-def upload_file(local_path: str, remote_subdir: str = "input"):
+
+def activate_profile(profile: str):
+    """Activate modal profile before operations"""
+    if profile:
+        subprocess.run([str(MODAL_EXE), "profile", "activate", profile], 
+                      capture_output=True)
+
+
+def upload_file(local_path: str, remote_subdir: str = "input", profile: str = None):
     """
-    上传单个文件到 Modal Volume
+    Upload single file to Modal Volume
     
     Args:
-        local_path: 本地文件路径
-        remote_subdir: Volume 中的子目录，默认 input
+        local_path: Local file path
+        remote_subdir: Volume subdirectory, default input
+        profile: Modal profile name
     """
     local_path = Path(local_path)
     
@@ -27,13 +39,10 @@ def upload_file(local_path: str, remote_subdir: str = "input"):
     
     print(f"Uploading: {local_path} -> lada-videos:{remote_path}")
     
-    cmd = [
-        "modal", "volume", "put",
-        "lada-videos",
-        str(local_path),
-        remote_path,
-    ]
+    # Activate profile first
+    activate_profile(profile)
     
+    cmd = [str(MODAL_EXE), "volume", "put", "lada-videos", str(local_path), remote_path]
     result = subprocess.run(cmd)
     
     if result.returncode == 0:
@@ -44,8 +53,8 @@ def upload_file(local_path: str, remote_subdir: str = "input"):
         return False
 
 
-def upload_directory(local_dir: str, remote_subdir: str = "input"):
-    """上传目录中的所有视频文件"""
+def upload_directory(local_dir: str, remote_subdir: str = "input", profile: str = None):
+    """Upload all video files in directory"""
     local_dir = Path(local_dir)
     
     if not local_dir.is_dir():
@@ -53,7 +62,6 @@ def upload_directory(local_dir: str, remote_subdir: str = "input"):
         return
     
     video_extensions = {".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm"}
-    
     files = [f for f in local_dir.iterdir() if f.suffix.lower() in video_extensions]
     
     if not files:
@@ -64,7 +72,7 @@ def upload_directory(local_dir: str, remote_subdir: str = "input"):
     
     success = 0
     for f in files:
-        if upload_file(str(f), remote_subdir):
+        if upload_file(str(f), remote_subdir, profile):
             success += 1
     
     print(f"\nUploaded: {success}/{len(files)}")
@@ -73,17 +81,18 @@ def upload_directory(local_dir: str, remote_subdir: str = "input"):
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python upload.py <file_or_directory>")
-        print("  python upload.py video.mp4")
-        print("  python upload.py ./videos/")
+        print("  python upload.py <file_or_directory> [profile]")
+        print("  python upload.py video.mp4 hcxsmyl")
+        print("  python upload.py ./videos/ made54898")
         return
     
     path = Path(sys.argv[1])
+    profile = sys.argv[2] if len(sys.argv) > 2 else None
     
     if path.is_file():
-        upload_file(str(path))
+        upload_file(str(path), profile=profile)
     elif path.is_dir():
-        upload_directory(str(path))
+        upload_directory(str(path), profile=profile)
     else:
         print(f"Error: Path not found: {path}")
 
