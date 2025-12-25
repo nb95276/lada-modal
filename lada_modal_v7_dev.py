@@ -489,14 +489,14 @@ def main(
     max_parallel: int = 10,
 ):
     """
-    Lada Modal CLI v5 DEV - Latest Lada with v4 Models
+    Lada Modal CLI v7 DEV - Docker Based with v4 Models
     
-    Default: detection=v4-fast (鏂伴粯璁?, max_clip=900
+    Default: detection=v4-fast, max_clip=900
     
     Examples:
-        modal run lada_modal_v5_dev.py --url "http://..." --parallel
-        modal run lada_modal_v5_dev.py --action parallel --filename video.mp4
-        modal run lada_modal_v5_dev.py --filename video.mp4 --detection v4-accurate
+        modal run lada_modal_v7_dev.py --url "http://..." --parallel
+        modal run lada_modal_v7_dev.py --action parallel --filename video.mp4
+        modal run lada_modal_v7_dev.py --filename video.mp4 --detection v4-accurate
     """
     import time
     import re
