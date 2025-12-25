@@ -6,6 +6,8 @@ on:
       - 'Dockerfile.lada-v7'
     branches:
       - main
+  schedule:
+    - cron: '0 8 * * *'  # 每天 UTC 8:00 (北京时间 16:00) 自动构建
   workflow_dispatch:  # 允许手动触发
 
 jobs:
