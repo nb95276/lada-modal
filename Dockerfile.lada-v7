@@ -12,10 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     aria2 \
     && rm -rf /var/lib/apt/lists/*
 
-USER lada
+# 安装额外 Python 依赖到 lada 用户目录
+RUN pip install --no-cache-dir --target=/home/lada/.local/lib/python3.13/site-packages \
+    fastapi requests tqdm
 
-# 安装额外 Python 依赖（使用 --user 与官方镜像保持一致）
-RUN pip install --user --no-cache-dir fastapi requests tqdm
+USER lada
 
 ENTRYPOINT ["lada-cli"]
 CMD ["--help"]
