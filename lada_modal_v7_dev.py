@@ -5,6 +5,7 @@ import modal
 
 image = (
     modal.Image.from_registry("fkccp/lada-modal:latest")
+    .pip_install("fastapi[standard]", "requests", "tqdm")
 )
 
 app = modal.App("lada-restore-v7-dev", image=image)
