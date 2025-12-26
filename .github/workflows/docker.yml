@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/lada-modal
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/lada_modal
 
 jobs:
   build:
