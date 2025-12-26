@@ -10,6 +10,7 @@ image = (
 app = modal.App("lada-restore-v7-dev", image=image)
 volume = modal.Volume.from_name("lada-videos", create_if_missing=True)
 VOLUME_PATH = "/data"
+MODEL_DIR = "/model_weights"
 
 
 
@@ -54,7 +55,9 @@ def split_video(filename: str, segment_minutes: int = 10):
          "-of", "default=noprint_wrappers=1:nokey=1", input_path],
         capture_output=True, text=True
     )
-    duration = float(result.stdout.strip()) if result.returncode == 0 else 0
+    if result.returncode != 0 or not result.stdout.strip():
+        raise RuntimeError(f"ffprobe failed: {result.stderr or 'no output'}")
+    duration = float(result.stdout.strip())
     duration_min = duration / 60
 
     print(f"Video: {filename}, Duration: {duration_min:.1f} min")
@@ -162,7 +165,7 @@ def restore_video(
     print(f"Processing: {input_filename}")
     print(f"Detection: {detection}, Codec: {codec}, CRF: {crf}, MaxClip: {max_clip_length}")
 
-    model_dir = "/model_weights"
+    model_dir = MODEL_DIR
     detection_models = {
         "v4-fast": "lada_mosaic_detection_model_v4_fast.pt",
         "v4-accurate": "lada_mosaic_detection_model_v4_accurate.pt",
@@ -184,36 +187,35 @@ def restore_video(
     ]
 
     print(f"Running: {' '.join(cmd)}")
-    process = subprocess.Popen(
+    with subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1
-    )
-    
-    output_lines = []
-    last_reported = 0
-    
-    for line in process.stdout:
-        output_lines.append(line)
-        if "Processing video:" in line:
-            try:
-                pct = int(line.split("%")[0].split()[-1])
-                milestone = (pct // 25) * 25
-                if milestone > last_reported:
-                    last_reported = milestone
-                    print(f"  {input_filename}: {pct}%", flush=True)
-            except (ValueError, IndexError):
-                pass
-        elif "error" in line.lower() or "failed" in line.lower():
-            print(line.strip(), flush=True)
-    
-    process.wait()
-    
-    if process.returncode != 0:
-        print(f"Lada failed with return code: {process.returncode}")
-        raise RuntimeError(f"Lada failed: {''.join(output_lines[-20:])}")
+    ) as process:
+        output_lines = []
+        last_reported = 0
+
+        for line in process.stdout:
+            output_lines.append(line)
+            if "Processing video:" in line:
+                try:
+                    pct = int(line.split("%")[0].split()[-1])
+                    milestone = (pct // 25) * 25
+                    if milestone > last_reported:
+                        last_reported = milestone
+                        print(f"  {input_filename}: {pct}%", flush=True)
+                except (ValueError, IndexError):
+                    pass
+            elif "error" in line.lower() or "failed" in line.lower():
+                print(line.strip(), flush=True)
+
+        process.wait()
+
+        if process.returncode != 0:
+            print(f"Lada failed with return code: {process.returncode}")
+            raise RuntimeError(f"Lada failed: {''.join(output_lines[-20:])}")
 
     size_mb = os.path.getsize(output_path) / (1024 * 1024)
     print(f"Done: {output_filename} ({size_mb:.1f} MB)")
@@ -371,6 +373,12 @@ def download_with_progress(url: str, output_path: str) -> int:
         result = subprocess.run(cmd, capture_output=False)
         if result.returncode == 0 and os.path.exists(output_path):
             return os.path.getsize(output_path)
+        # 清理可能的部分下载文件
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        aria_file = output_path + ".aria2"
+        if os.path.exists(aria_file):
+            os.remove(aria_file)
         print("aria2c failed, falling back to requests...")
     
     import requests
@@ -528,7 +536,7 @@ def main(
         print(f"Segments: {segments}")
 
     elif action == "merge":
-        if not prefix:
+        def get_mergeable_prefixes():
             files = list_files.remote("output")
             prefixes = {}
             for f in files:
@@ -539,29 +547,23 @@ def main(
                     if p not in prefixes:
                         prefixes[p] = []
                     prefixes[p].append(name)
-            
+            return prefixes
+
+        if not prefix:
+            prefixes = get_mergeable_prefixes()
             if not prefixes:
                 print("No mergeable segments found in output")
                 return
-            
+
             print("Mergeable groups:")
             prefix_list = list(prefixes.keys())
             for i, p in enumerate(prefix_list, 1):
                 count = len(prefixes[p])
                 print(f"  [{i}] {p}* ({count} segments)")
             return
-        
+
         if prefix.isdigit():
-            files = list_files.remote("output")
-            prefixes = {}
-            for f in files:
-                name = f.get('name', '')
-                match = re.match(r'(.+_part)\d+.*\.mp4$', name)
-                if match:
-                    p = match.group(1)
-                    if p not in prefixes:
-                        prefixes[p] = []
-                    prefixes[p].append(name)
+            prefixes = get_mergeable_prefixes()
             prefix_list = list(prefixes.keys())
             idx = int(prefix) - 1
             if 0 <= idx < len(prefix_list):
@@ -570,7 +572,7 @@ def main(
             else:
                 print(f"Error: Invalid index {prefix}")
                 return
-        
+
         result = merge_videos.remote(prefix, output or "merged.mp4")
         print(f"Merged: {result}")
 

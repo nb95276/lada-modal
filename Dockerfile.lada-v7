@@ -7,22 +7,17 @@ FROM ladaapp/lada:latest
 
 USER root
 
-# 安装系统依赖
+# 安装系统依赖 + uv + Python 依赖 (合并层减少镜像大小)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     aria2 \
     git \
     curl \
     wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# 修复 pip 并安装 Python 依赖
-# 安装 uv 并用 uv 安装依赖（比 pip 快 10-100 倍）
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    ~/.local/bin/uv pip install --system fastapi requests tqdm
-# 安装最新 lada main 分支
-# 用 uv 安装最新 lada main 分支
-RUN ~/.local/bin/uv pip install --system --reinstall --no-deps \
-    "lada @ git+https://github.com/ladaapp/lada.git@main"
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir uv==0.5.11 \
+    && uv pip install --system fastapi requests tqdm \
+    && uv pip install --system --reinstall --no-deps \
+       "lada @ git+https://github.com/ladaapp/lada.git@main"
 # 下载额外模型 (v2/v3.1，官方镜像只有 v4)
 RUN wget -q -O /model_weights/lada_mosaic_detection_model_v2.pt \
     https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v2.pt && \
