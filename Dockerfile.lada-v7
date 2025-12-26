@@ -1,5 +1,5 @@
 # Lada Modal v7 Docker Image
-# 基于官方 lada 镜像，预下载全部模型
+# 基于官方 lada 镜像，添加必要工具
 # 构建: docker build -f Dockerfile.lada-v7 -t fkccp/lada-modal:latest .
 # 推送: docker push fkccp/lada-modal:latest
 
@@ -10,23 +10,12 @@ USER root
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     aria2 \
-    git \
-    curl \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装额外 Python 依赖到 lada 虚拟环境
-RUN /home/lada/.local/share/lada/venv/bin/pip install --no-cache-dir fastapi requests tqdm
-
-# 下载额外模型 (v2/v3.1，官方镜像只有 v4)
-RUN wget -q -O /model_weights/lada_mosaic_detection_model_v2.pt \
-    https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v2.pt && \
-    wget -q -O /model_weights/lada_mosaic_detection_model_v3.1_fast.pt \
-    https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v3.1_fast.pt && \
-    wget -q -O /model_weights/lada_mosaic_detection_model_v3.1_accurate.pt \
-    https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v3.1_accurate.pt
-
 USER lada
+
+# 安装额外 Python 依赖（使用 --user 与官方镜像保持一致）
+RUN pip install --user --no-cache-dir fastapi requests tqdm
 
 ENTRYPOINT ["lada-cli"]
 CMD ["--help"]
