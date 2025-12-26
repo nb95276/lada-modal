@@ -90,16 +90,12 @@ def merge_videos(prefix: str, output_name: str = "merged.mp4"):
     import subprocess
 
     volume.reload()
-    
+
     output_dir = f"{VOLUME_PATH}/output"
     os.makedirs(output_dir, exist_ok=True)
-    
-    if os.path.exists(output_dir):
-        all_files = os.listdir(output_dir)
-        print(f"All files in output: {all_files}")
-    else:
-        print(f"Output directory does not exist!")
-        all_files = []
+
+    all_files = os.listdir(output_dir)
+    print(f"All files in output: {all_files}")
 
     files = sorted([f for f in all_files if prefix in f and f.endswith(".mp4")])
     if not files:
@@ -283,25 +279,15 @@ def parallel_restore(
         print(f"Pending: {len(pending_segments)}/{len(segments)} segments")
         print(f"Starting up to {min(len(pending_segments), max_parallel)} GPU instances...")
     
-    args_list = [
-        (seg, codec, crf, detection, max_clip_length, True)
-        for seg in pending_segments
-    ]
-    
     results = []
     success_count = len(segments) - len(pending_segments)
     failed_count = 0
-    
+
     if pending_segments:
         with tqdm(total=len(pending_segments), desc="GPU Processing", unit="seg", ncols=80) as pbar:
-            for i, result in enumerate(restore_video.map(
-                [a[0] for a in args_list],
-                [a[1] for a in args_list],
-                [a[2] for a in args_list],
-                [a[3] for a in args_list],
-                [a[4] for a in args_list],
-                [a[5] for a in args_list],
-            )):
+            for result in restore_video.starmap(
+                [(seg, codec, crf, detection, max_clip_length, True) for seg in pending_segments]
+            ):
                 results.append(result)
                 pbar.update(1)
                 if result.get("status") in ("success", "skipped"):
@@ -350,7 +336,7 @@ def download_with_progress(url: str, output_path: str) -> int:
     
     print(f"Downloading: {url[:100]}...")
     
-    # 妫€娴嬫槸鍚︽槸 115 缃戠洏閾炬帴锛堥檺鍒跺苟鍙戣繛鎺ユ暟锛?
+    # 检测是否是 115 网盘链接（限制并发连接数）
     is_115 = any(x in url.lower() for x in ['115cdn', '115.com', 'xiaoya', '952786'])
     connections = "3" if is_115 else "16"
     

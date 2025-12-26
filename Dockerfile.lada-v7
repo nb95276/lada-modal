@@ -1,5 +1,6 @@
 # Lada Modal v7 Docker Image
-# 基于官方 lada 镜像，添加必要工具
+# 基于官方 lada 镜像，添加 aria2 下载工具
+# Python 依赖由 Modal pip_install 安装
 # 构建: docker build -f Dockerfile.lada-v7 -t fkccp/lada-modal:latest .
 # 推送: docker push fkccp/lada-modal:latest
 
@@ -11,10 +12,6 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     aria2 \
     && rm -rf /var/lib/apt/lists/*
-
-# 安装额外 Python 依赖到 lada 用户目录
-RUN pip install --no-cache-dir --target=/home/lada/.local/lib/python3.13/site-packages \
-    fastapi requests tqdm
 
 USER lada
 
