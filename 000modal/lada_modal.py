@@ -11,7 +11,7 @@ app = modal.App("lada-video-processor")
 DOCKERHUB_USERNAME = "fkccp"
 
 lada_image = modal.Image.from_registry(
-    f"{DOCKERHUB_USERNAME}/lada-modal:latest"
+    f"{DOCKERHUB_USERNAME}/lada_modal:latest"
 )
 
 # 持久化存储卷
