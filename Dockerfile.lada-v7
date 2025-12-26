@@ -15,9 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 uv 并用 uv 安装额外依赖
-RUN pip install --no-cache-dir --break-system-packages uv \
-    && uv pip install --system fastapi requests tqdm
+# 安装额外 Python 依赖（不使用 uv 避免破坏现有环境）
+RUN pip install --no-cache-dir --break-system-packages fastapi requests tqdm
 # 下载额外模型 (v2/v3.1，官方镜像只有 v4)
 RUN wget -q -O /model_weights/lada_mosaic_detection_model_v2.pt \
     https://huggingface.co/ladaapp/lada/resolve/main/lada_mosaic_detection_model_v2.pt && \
